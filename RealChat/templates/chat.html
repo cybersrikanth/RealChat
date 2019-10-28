@@ -1,0 +1,298 @@
+{% if user.is_authenticated %}
+{% load static %}
+
+    <!DOCTYPE html>
+<head>
+
+<title>RealChat</title>
+
+    <link rel='stylesheet prefetch' href={% static 'font-awesome.min.css' %}>
+    <meta charset='UTF-8'>
+<script>
+    function setdp() {
+        if (window.confirm("Do You want to upload Profile pic?")){
+
+
+            //location.replace('/accounts/uploadpic/');
+        }
+
+    }
+
+    function swap_chat(showchat) {
+        $('.content').show();
+        $(".content").not('#'+showchat).hide();
+
+    }
+</script>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link rel='stylesheet prefetch' href={% static 'reset.min.css'%}>
+<link rel='stylesheet prefetch' href='https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css'><link rel='stylesheet prefetch' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.2/css/font-awesome.min.css'>
+
+</head>
+<body>
+
+<div id="frame">
+	<div id="sidepanel">
+		<div id="profile">
+			<div class="wrap">
+				<img id="profile-img" src="{{ '/media/images.jpeg' }}" class="online" alt="" onclick="setdp()"/>
+				<p>{{ user.username }}</p>
+{#				<i class="fa fa-chevron-down expand-button" aria-hidden="true"></i>#}
+
+{#				<div id="expanded">#}
+{#					<label for="twitter"><i class="fa fa-facebook fa-fw" aria-hidden="true"></i></label>#}
+{#					<input name="twitter" type="text" value="mikeross" />#}
+{#					<label for="twitter"><i class="fa fa-twitter fa-fw" aria-hidden="true"></i></label>#}
+{#					<input name="twitter" type="text" value="ross81" />#}
+{#					<label for="twitter"><i class="fa fa-instagram fa-fw" aria-hidden="true"></i></label>#}
+{#					<input name="twitter" type="text" value="mike.ross" />#}
+{#				</div>#}
+			</div>
+		</div>
+		<div id="contacts">
+			<ul id="cont">
+
+			</ul>
+		</div>
+		<div id="bottom-bar">
+			<button id="addContact" onclick="addContact()"><i class="fa fa-user-plus fa-fw" aria-hidden="true"></i> <span>Add Contact</span></button>
+			<button id="logout" onclick="location.href='/accounts/logout/'"><i class="fa fa-cog fa-fw" aria-hidden="true"></i> <span>Logout</span></button>
+		</div>
+	</div>
+</div>
+<script src={% static 'jquery-2.2.4.min.js' %}></script>
+<script src="{% static 'main.js' %}"></script>
+<script src="{% static 'reconnecting-websocket.js' %}"></script>
+<script>
+    function addContact(){
+        var usr = prompt("Enter username to start chat");
+        if (usr!='' && usr!=null){
+            window.location.replace("/accounts/search?usr="+usr);
+    }}
+
+    function forward(id) {
+        var snd = window.prompt("Enter user name of your contact to forward");
+        if (chatSocket[snd] != undefined && snd!=null) {
+            chatSocket[snd].send(JSON.stringify({
+                'command': 'forward',
+                'id': id,
+                'to': snd,
+                'from': username
+            }));
+
+        }
+        else if (snd !=null){
+            alert("No contact with entered username");
+        }
+
+    }
+
+
+    var contacts ={{ contacts }};
+    var cont =[];
+    for(var key in contacts){
+        cont.push(key);
+    }
+
+        cont.forEach(function (cont){
+        var msgListTag = document.createElement('li');
+        var imgTag = document.createElement('img');
+        var pTag = document.createElement('p');
+        var divTag = document.createElement('div');
+        var divTag1=document.createElement('div');
+        var pTag1 = document.createElement('p');
+        //var spanTag = document.createElement('span');
+        imgTag.src = "{{ '/media/images.jpeg' }}";
+        msgListTag.className='contact';
+        msgListTag.id = cont;
+        msgListTag.setAttribute("onclick",'swap_chat(this.id)');
+        divTag.className='wrap';
+        divTag1.className='meta';
+        pTag.className='name';
+        pTag.textContent=cont;
+        pTag1.className="preview";
+        pTag1.id = cont+"-preview";
+        divTag1.appendChild(pTag);
+        divTag1.appendChild(pTag1);
+        divTag.appendChild(imgTag);
+        divTag.appendChild(divTag1);
+        msgListTag.appendChild(divTag);
+        document.querySelector('#cont').appendChild(msgListTag);
+
+    });
+
+    cont.forEach(
+        function (cont){
+        var topDivTag = document.createElement('div');
+        var profileDivTag = document.createElement('div');
+        var imgTag = document.createElement('img');
+        var pTag = document.createElement('p');
+        var messageDivTag = document.createElement('div');
+        var chatUlTag = document.createElement('ul');
+        var messageInputDiv = document.createElement('div');
+        var wrapDiv = document.createElement('div');
+        var input = document.createElement('input');
+        var button = document.createElement('button');
+        topDivTag.className='content';
+        topDivTag.id=cont;
+        profileDivTag.className = "contact-profile";
+        imgTag.src="{{ '/media/images.jpeg' }}";
+        pTag.textContent=cont;
+        messageDivTag.className='messages';
+        chatUlTag.id= cont+"-chat-log";
+       // chatUlTag.className="chat-logs"
+        messageInputDiv.className='message-input';
+        wrapDiv.className='wrap';
+        input.type='text';
+        input.id=cont+'-text';
+        input.placeholder="Write your message...";
+        button.className="submit";
+        button.id=cont;
+        button.setAttribute("onclick",'sendMessage(this.id)');
+        profileDivTag.appendChild(imgTag);
+        profileDivTag.appendChild(pTag);
+        messageDivTag.appendChild(chatUlTag);
+        wrapDiv.appendChild(input);
+        wrapDiv.appendChild(button);
+        messageInputDiv.appendChild(wrapDiv);
+        topDivTag.appendChild(profileDivTag);
+        topDivTag.appendChild(messageDivTag);
+        topDivTag.appendChild(messageInputDiv);
+        document.querySelector('#frame').appendChild(topDivTag);
+    });
+
+$('.content').hide();
+    roomName = {{ room_name_json}}+"";
+    username = "{{ user.username }}"+"";
+    var room = {{ contacts }};
+    var chatSocket = {};
+    for (var key in room) {
+        chatSocket[key] = new ReconnectingWebSocket(
+            'ws://' + window.location.host +
+            '/ws/chat/' + room[key] + '/');
+        //chatSocket[key].debug = true;
+    }
+
+    chatSocket[key].onopen = function (e) {
+        $('.CHAT-LOG').remove();
+        fetchMessages();
+    }
+
+    function fetchMessages() {
+        for (var key in room){
+        chatSocket[key].send(JSON.stringify({
+            'command': 'fetch_messages',
+            'from': key,
+            'to':username
+        }));
+    }}
+    for(var key in room) {
+
+        chatSocket[key].onmessage = function (e) {
+            var data = JSON.parse(e.data);
+            if (data['command'] == 'messages') {
+                for (let i = 0; i<data['messages'].length; i++) {
+                    createMessage(data['messages'][i], 0);
+                }
+            } else if (data['command'] == 'new_message') {
+                createMessage(data['message'], 1);
+            } else if (data['command'] == 'forwarded') {
+                createMessage(data['message'], data['from']);
+            }
+        }
+        chatSocket[key].onclose = function (e) {
+            console.error('chat socket clossed');
+        };
+    }
+    function createMessage(data,flag) {
+        if (data != undefined) {
+            var author = data['author'];
+            var to = data['to'];
+            var msgListTag = document.createElement('li');
+            var imgTag = document.createElement('img');
+            var pTag = document.createElement('p');
+            pTag.className="CHAT-LOG";
+            imgTag.className='CHAT-LOG';
+            var myDate = new Date(data.timestamp);
+            var timestamp = myDate.toLocaleString();
+            if (flag==0 || flag==1) {
+                var msg = data.content + "<br><font size = 1px color='blue'><sub>" + timestamp + '<br></sub></font>';
+            }
+            else{
+                var msg = "<font size = 1px color='blue'>forward: "+author+"<br>"+timestamp+"<br></font>"+data.content;
+
+            }
+                pTag.innerHTML = msg;
+            imgTag.src = "{{ '/media/images.jpeg' }}";
+            if (flag==1 || flag==0){
+            if (author == username) {
+                msgListTag.className = 'sent';
+            } else {
+                msgListTag.className = 'replies';
+            }}
+            else {
+                if(flag == username){
+                    msgListTag.className='sent';
+                }
+                else{
+                    msgListTag.className= 'replies';
+                }
+            }
+            msgListTag.appendChild(imgTag);
+            msgListTag.appendChild(pTag);
+            msgListTag.id = data['id'];
+            msgListTag.setAttribute('onclick', 'forward(this.id)');
+            if (flag==0 || flag==1){
+            if (author == username) {
+                document.querySelector('#' + to + '-chat-log').appendChild(msgListTag);
+                document.getElementById(to+'-preview').innerText= "You : "+data.content;
+            } else {
+                document.querySelector('#' + author + '-chat-log').appendChild(msgListTag);
+                document.getElementById(author+'-preview').innerText="  " +data.content;
+            }
+            }
+            else{
+                if(flag == username){
+                    document.querySelector('#' + to + '-chat-log').appendChild(msgListTag);
+                    document.getElementById(to+'-preview').innerText= "You : "+data.content;
+                }else{
+                    document.querySelector('#' + flag + '-chat-log').appendChild(msgListTag);
+                    document.getElementById(flag+'-preview').innerText="  " +data.content;
+                }
+            }
+            if (Notification.permission == 'granted' && to==username && flag){
+                var note = new Notification('RealChat',{body:"New message from "+author});
+            }
+            else {
+                Notification.requestPermission();
+            }
+
+
+        }
+    }
+
+    function sendMessage(e) {
+        var messageInputDom = document.getElementById(e + "-text");
+        var message = messageInputDom.value;
+        if ($.trim(message) == '') {
+            return false
+        }
+        chatSocket[e].send(JSON.stringify({
+            'command': 'new_message',
+            'message': message,
+            'from': username,
+            'to': e
+        }));
+        messageInputDom.value = '';
+        return 0;
+
+
+
+}
+</script>
+
+</body></html>
+{% else %}
+<script>
+window.location.replace("/accounts/login/");</script>
+{% endif %}
